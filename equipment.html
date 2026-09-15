@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equipment - Lab Asset Management</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header><h1>Equipment</h1><nav id="mainNav"></nav></header>
+  <main>
+    <h2>Available Equipment</h2>
+    <p>Equipment list will appear here. (All Roles)</p>
+  </main>
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNavigation } from './js/navigation.js';
+    async function init() {
+      const user = await requireAuth();
+      if (!user) return;
+      await renderNavigation();
+    }
+    init();
+  </script>
+</body>
+</html>

@@ -3,40 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - Lab Asset Management</title>
+  <title>Create account - Lab Asset Management</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="login-container">
-    <h1>Create Account</h1>
+  <main class="login-container">
+    <h1>Create your account</h1>
+    <p>Request access to the laboratory asset system.</p>
     <form id="signupForm">
-      <input type="text" id="fullName" placeholder="Full Name" required>
-      <input type="email" id="email" placeholder="Email" required>
-      <input type="password" id="password" placeholder="Password" required>
-      <button type="submit">Sign Up</button>
+      <label for="fullName">Full name</label>
+      <input type="text" id="fullName" placeholder="Jane Smith" required>
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@example.com" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="At least 6 characters" minlength="6" required>
+      <button type="submit">Create account</button>
     </form>
-    <p id="message" class="error"></p>
-    <p>Already have an account? <a href="login.html">Sign In</a></p>
-  </div>
+    <p id="errorMessage" class="error"></p>
+    <p>Already have an account? <a href="login.html">Sign in</a></p>
+  </main>
 
   <script type="module">
     import { signUp } from './js/auth.js';
 
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fullName = document.getElementById('fullName').value;
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const messageEl = document.getElementById('message');
+    document.getElementById('signupForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('errorMessage');
+      message.textContent = '';
 
       try {
-        await signUp(email, password, fullName, 'requester');
-        messageEl.textContent = 'Account created! Redirecting to login...';
-        messageEl.style.color = 'green';
-        setTimeout(() => window.location.href = 'login.html', 2000);
+        await signUp(
+          document.getElementById('email').value,
+          document.getElementById('password').value,
+          document.getElementById('fullName').value
+        );
+        window.location.href = 'index.html';
       } catch (error) {
-        messageEl.textContent = error.message;
-        messageEl.style.color = 'red';
+        message.textContent = error.message;
       }
     });
   </script>

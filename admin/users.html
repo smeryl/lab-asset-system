@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Users - Lab Asset Management</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header><h1>Manage Users</h1><nav id="mainNav"></nav></header>
+  <main>
+    <h2>User Management</h2>
+    <p>User list will appear here. (Admin Only)</p>
+  </main>
+  <script type="module">
+    import { requireAuth, hasRole } from '../js/auth.js';
+    import { renderNavigation } from '../js/navigation.js';
+    async function init() {
+      const user = await requireAuth();
+      if (!user || !hasRole(user, ['admin'])) { document.body.innerHTML = '<h1>Access Denied</h1>'; return; }
+      await renderNavigation();
+    }
+    init();
+  </script>
+</body>
+</html>

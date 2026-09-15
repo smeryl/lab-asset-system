@@ -58,7 +58,8 @@ export function onAuthStateChange(callback) {
 export async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) {
-    window.location.href = 'login.html';
+    const root = window.location.pathname.includes('/admin/') ? '../' : './';
+    window.location.href = `${root}login.html`;
     return null;
   }
   return user;
