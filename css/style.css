@@ -122,6 +122,12 @@ main h2 {
 
 main > p { color: var(--text-muted); margin-top: -0.8rem; }
 
+.eyebrow { color: var(--primary); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; margin: 0 0 0.65rem; }
+.page-intro { max-width: 42rem; margin: -0.8rem 0 2rem; color: var(--text-muted); }
+.card strong, .card span { display: block; }
+.card span { margin-top: 0.45rem; color: var(--text-muted); font-size: 0.88rem; font-weight: 400; }
+.loading-page { text-align: center; padding-top: 20vh; }
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

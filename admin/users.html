@@ -7,18 +7,62 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <header><h1>Manage Users</h1><nav id="mainNav"></nav></header>
+  <header>
+    <h1>Manage Users</h1>
+    <nav id="mainNav"></nav>
+  </header>
+
   <main>
-    <h2>User Management</h2>
-    <p>User list will appear here. (Admin Only)</p>
+    <h2>System Users</h2>
+    <div id="loadingMessage">Loading users...</div>
+    <table id="usersTable" style="display: none;">
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>Email</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="errorMessage" style="display: none; color: red;">Access Denied or Error loading users.</p>
   </main>
+
   <script type="module">
     import { requireAuth, hasRole } from '../js/auth.js';
     import { renderNavigation } from '../js/navigation.js';
+    import { supabase } from '../js/supabaseClient.js';
+
     async function init() {
       const user = await requireAuth();
-      if (!user || !hasRole(user, ['admin'])) { document.body.innerHTML = '<h1>Access Denied</h1>'; return; }
+      if (!user || !hasRole(user, ['admin'])) { 
+        document.body.innerHTML = '<h1>Access Denied</h1>'; 
+        return; 
+      }
       await renderNavigation();
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('full_name', { ascending: true });
+
+      document.getElementById('loadingMessage').style.display = 'none';
+
+      if (error || !data || data.length === 0) {
+        document.getElementById('errorMessage').style.display = 'block';
+        return;
+      }
+
+      const tbody = document.querySelector('#usersTable tbody');
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td>${u.full_name || 'N/A'}</td>
+          <td>${u.email}</td>
+          <td><span class="badge badge-${u.role === 'admin' ? 'approved' : u.role === 'staff' ? 'released' : 'pending'}">${u.role.toUpperCase()}</span></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('usersTable').style.display = 'table';
     }
     init();
   </script>

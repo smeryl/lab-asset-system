@@ -7,18 +7,65 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header><h1>Equipment</h1><nav id="mainNav"></nav></header>
+  <header>
+    <h1>Laboratory Asset Management</h1>
+    <nav id="mainNav"></nav>
+  </header>
+
   <main>
     <h2>Available Equipment</h2>
-    <p>Equipment list will appear here. (All Roles)</p>
+    <div id="loadingMessage">Loading equipment...</div>
+    <table id="equipmentTable" style="display: none;">
+      <thead>
+        <tr>
+          <th>Asset Tag</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="emptyMessage" style="display: none; margin-top: 1rem;">No equipment found in the database.</p>
   </main>
+
   <script type="module">
     import { requireAuth } from './js/auth.js';
     import { renderNavigation } from './js/navigation.js';
+    import { supabase } from './js/supabaseClient.js';
+
     async function init() {
       const user = await requireAuth();
       if (!user) return;
       await renderNavigation();
+
+      const { data, error } = await supabase
+        .from('equipment')
+        .select('*')
+        .order('asset_tag', { ascending: true });
+
+      document.getElementById('loadingMessage').style.display = 'none';
+
+      if (error || !data || data.length === 0) {
+        document.getElementById('emptyMessage').style.display = 'block';
+        return;
+      }
+
+      const tbody = document.querySelector('#equipmentTable tbody');
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td><strong>${item.asset_tag}</strong></td>
+          <td>${item.name}</td>
+          <td>${item.category || 'N/A'}</td>
+          <td>
+            <span class="badge badge-${item.status === 'available' ? 'approved' : item.status === 'maintenance' ? 'pending' : 'rejected'}">
+              ${item.status.toUpperCase()}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('equipmentTable').style.display = 'table';
     }
     init();
   </script>

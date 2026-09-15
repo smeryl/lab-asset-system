@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Requester Workspace - Lab Asset Management</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header><h1>Requester Workspace</h1><nav id="mainNav"></nav></header>
+  <main>
+    <p class="eyebrow">PERSONAL EQUIPMENT ACCESS</p>
+    <h2>What do you need for your work?</h2>
+    <p class="page-intro">Browse available laboratory assets, submit a request, and track its progress.</p>
+    <div class="dashboard-grid">
+      <a href="equipment.html" class="card"><strong>Browse Equipment</strong><span>Check availability and asset details.</span></a>
+      <a href="request-equipment.html" class="card"><strong>Request Equipment</strong><span>Submit a new borrowing request.</span></a>
+      <a href="my-requests.html" class="card"><strong>My Requests</strong><span>Review your active and past requests.</span></a>
+    </div>
+  </main>
+  <script type="module">
+    import { requireAuth, hasRole } from './js/auth.js';
+    import { renderNavigation } from './js/navigation.js';
+    const user = await requireAuth();
+    if (user && hasRole(user, ['requester'])) await renderNavigation();
+    else if (user) window.location.replace('index.html');
+  </script>
+</body>
+</html>

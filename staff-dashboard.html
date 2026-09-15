@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Workspace - Lab Asset Management</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header><h1>Staff Workspace</h1><nav id="mainNav"></nav></header>
+  <main>
+    <p class="eyebrow">LABORATORY OPERATIONS</p>
+    <h2>Keep equipment moving safely.</h2>
+    <p class="page-intro">Process handovers, returns, and maintenance work from one operational workspace.</p>
+    <div class="dashboard-grid">
+      <a href="borrowing.html" class="card"><strong>Borrowing Desk</strong><span>Release approved equipment to requesters.</span></a>
+      <a href="returns.html" class="card"><strong>Returns Desk</strong><span>Record returned assets and their condition.</span></a>
+      <a href="maintenance.html" class="card"><strong>Maintenance</strong><span>Track assets that need attention.</span></a>
+    </div>
+  </main>
+  <script type="module">
+    import { requireAuth, hasRole } from './js/auth.js';
+    import { renderNavigation } from './js/navigation.js';
+    const user = await requireAuth();
+    if (user && hasRole(user, ['staff'])) await renderNavigation();
+    else if (user) window.location.replace('index.html');
+  </script>
+</body>
+</html>

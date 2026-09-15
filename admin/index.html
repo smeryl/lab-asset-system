@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console - Lab Asset Management</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="admin-shell">
+  <header><h1>Administration Console</h1><nav id="mainNav"></nav></header>
+  <main>
+    <p class="eyebrow">SYSTEM CONTROL CENTER</p>
+    <h2>Manage the laboratory platform.</h2>
+    <p class="page-intro">Review requests, maintain the asset register, and monitor system activity.</p>
+    <div class="dashboard-grid">
+      <a href="approvals.html" class="card"><strong>Approvals</strong><span>Review pending borrowing requests.</span></a>
+      <a href="equipment.html" class="card"><strong>Asset Register</strong><span>Add, update, and retire equipment.</span></a>
+      <a href="users.html" class="card"><strong>User Management</strong><span>Manage staff and requester access.</span></a>
+      <a href="reports.html" class="card"><strong>Reports</strong><span>View operational summaries.</span></a>
+      <a href="audit-logs.html" class="card"><strong>Audit Logs</strong><span>Review important system actions.</span></a>
+    </div>
+  </main>
+  <script type="module">
+    import { requireAuth, hasRole } from '../js/auth.js';
+    import { renderNavigation } from '../js/navigation.js';
+    const user = await requireAuth();
+    if (user && hasRole(user, ['admin'])) await renderNavigation();
+    else if (user) window.location.replace('../index.html');
+  </script>
+</body>
+</html>
