@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approvals - Lab Asset Management</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Approval Management</h1>
+    <nav id="mainNav"></nav>
+  </header>
+
+  <main>
+    <h2>Pending Borrowing Requests</h2>
+    <table id="pendingRequests">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Requester</th>
+          <th>Equipment</th>
+          <th>Request Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import { requireAuth, hasRole } from '../js/auth.js';
+    import { renderNavigation } from '../js/navigation.js';
+    import { approveRequest, rejectRequest } from '../js/borrowing.js';
+    import { supabase } from '../js/supabaseClient.js';
+
+    async function init() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      // TC-A4-01: Viewer attempts to open Admin page — access denied
+      if (!hasRole(user, ['admin'])) {
+        document.body.innerHTML = '<h1>Access Denied</h1><p>You do not have permission to view this page.</p>';
+        return;
+      }
+
+      await renderNavigation();
+      await loadPendingRequests();
+    }
+
+    async function loadPendingRequests() {
+      const { data, error } = await supabase
+        .from('borrowing_requests')
+        .select(`
+          id,
+          request_date,
+          notes,
+          requester:users!requester_id (full_name, email),
+          equipment:equipment!equipment_id (asset_tag, name)
+        `)
+        .eq('status', 'pending')
+        .order('request_date', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const tbody = document.querySelector('#pendingRequests tbody');
+      tbody.innerHTML = data.map(req => `
+        <tr>
+          <td>${req.id}</td>
+          <td>${req.requester.full_name} (${req.requester.email})</td>
+          <td>${req.equipment.asset_tag} - ${req.equipment.name}</td>
+          <td>${new Date(req.request_date).toLocaleDateString()}</td>
+          <td>
+            <button class="btn-approve" data-id="${req.id}">Approve</button>
+            <button class="btn-reject" data-id="${req.id}">Reject</button>
+          </td>
+        </tr>
+      `).join('');
+
+      // Attach event listeners
+      tbody.querySelectorAll('.btn-approve').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await approveRequest(btn.dataset.id);
+            await loadPendingRequests();
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+
+      tbody.querySelectorAll('.btn-reject').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await rejectRequest(btn.dataset.id);
+            await loadPendingRequests();
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

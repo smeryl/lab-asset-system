@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Lab Asset Management</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Laboratory Asset Management</h1>
+    <nav id="mainNav"></nav>
+  </header>
+
+  <main id="mainContent">
+    <h2>Dashboard</h2>
+    <div id="dashboardContent"></div>
+  </main>
+
+  <script type="module">
+    import { requireAuth, hasRole } from './js/auth.js';
+    import { renderNavigation } from './js/navigation.js';
+
+    async function init() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      await renderNavigation();
+
+      // Role-specific dashboard content
+      const dashboard = document.getElementById('dashboardContent');
+      if (hasRole(user, ['admin'])) {
+        dashboard.innerHTML = `
+          <div class="dashboard-grid">
+            <a href="admin/approvals.html" class="card">Pending Approvals</a>
+            <a href="admin/audit-logs.html" class="card">Audit Logs</a>
+            <a href="admin/users.html" class="card">Manage Users</a>
+            <a href="admin/equipment.html" class="card">Manage Equipment</a>
+          </div>
+        `;
+      } else if (hasRole(user, ['staff'])) {
+        dashboard.innerHTML = `
+          <div class="dashboard-grid">
+            <a href="borrowing.html" class="card">Create Borrowing</a>
+            <a href="returns.html" class="card">Process Returns</a>
+            <a href="maintenance.html" class="card">Maintenance Requests</a>
+            <a href="my-requests.html" class="card">My Requests</a>
+          </div>
+        `;
+      } else {
+        dashboard.innerHTML = `
+          <div class="dashboard-grid">
+            <a href="request-equipment.html" class="card">Request Equipment</a>
+            <a href="my-requests.html" class="card">My Requests</a>
+            <a href="equipment.html" class="card">View Available Equipment</a>
+          </div>
+        `;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
