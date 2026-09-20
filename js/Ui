@@ -1,0 +1,97 @@
+// Small shared helpers so every page renders data the same way.
+
+// Escape values coming from the database before putting them in innerHTML.
+export function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function badge(status) {
+  const s = String(status || 'unknown').toLowerCase();
+  const map = {
+    available: 'approved',
+    approved: 'approved',
+    borrowed: 'released',
+    released: 'released',
+    returned: 'returned',
+    pending: 'pending',
+    maintenance: 'pending',
+    overdue: 'pending',
+    rejected: 'rejected',
+    damaged: 'rejected',
+    retired: 'closed',
+    closed: 'closed',
+    admin: 'approved',
+    staff: 'released',
+    requester: 'pending'
+  };
+  return `<span class="badge badge-${map[s] || 'pending'}">${esc(s.toUpperCase())}</span>`;
+}
+
+export function fmtDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return isNaN(d) ? '—' : d.toLocaleDateString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+}
+
+export function fmtDateTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return isNaN(d) ? '—' : d.toLocaleString();
+}
+
+// Renders a "Loading…" / "Nothing here" / "Something broke" message into a
+// container. This is what makes a blank page tell you WHY it is blank.
+export function setState(el, kind, message) {
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = kind === 'error' ? 'state state-error' : 'state';
+  el.innerHTML = kind === 'error'
+    ? `<strong>Could not load data.</strong><br><small>${esc(message)}</small>`
+    : esc(message);
+}
+
+export function hide(el) {
+  if (el) el.style.display = 'none';
+}
+
+export function show(el, display = 'block') {
+  if (el) el.style.display = display;
+}
+
+// Turns a raw Supabase error into something a human can act on.
+export function explain(error) {
+  if (!error) return 'Unknown error.';
+  const msg = error.message || String(error);
+  if (/row-level security|permission denied/i.test(msg)) {
+    return msg + ' — your RLS policy is blocking this. Re-run sql/schema.sql.';
+  }
+  if (/relation .* does not exist/i.test(msg)) {
+    return msg + ' — that table is missing. Run sql/schema.sql in Supabase.';
+  }
+  if (/Could not find a relationship/i.test(msg)) {
+    return msg + ' — a foreign key is missing. Re-run sql/schema.sql.';
+  }
+  return msg;
+}
+
+export function toast(message) {
+  let box = document.getElementById('appToast');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'appToast';
+    box.className = 'toast';
+    document.body.appendChild(box);
+  }
+  box.textContent = message;
+  box.classList.add('toast-show');
+  clearTimeout(box._t);
+  box._t = setTimeout(() => box.classList.remove('toast-show'), 3200);
+}
