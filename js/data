@@ -1,0 +1,178 @@
+import { supabase } from './supabaseClient.js';
+import { getCurrentUser } from './auth.js';
+
+// The embed string used everywhere a request needs its related rows.
+// The `!constraint_name` hints match the named foreign keys in sql/schema.sql.
+const REQUEST_SELECT = `
+  id, status, notes, request_date, due_date,
+  approval_date, release_date, return_date, is_damaged,
+  requester_id, equipment_id,
+  requester:users!borrowing_requests_requester_id_fkey (id, full_name, email, role),
+  approver:users!borrowing_requests_approver_id_fkey  (id, full_name, email),
+  equipment:equipment!borrowing_requests_equipment_id_fkey (id, asset_tag, name, category, status)
+`;
+
+/* ===================== EQUIPMENT ===================== */
+
+export async function fetchEquipment({ status = null, search = '' } = {}) {
+  let query = supabase.from('equipment').select('*').order('asset_tag', { ascending: true });
+  if (status) query = query.eq('status', status);
+  if (search) query = query.or(`asset_tag.ilike.%${search}%,name.ilike.%${search}%,category.ilike.%${search}%`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createEquipment(payload) {
+  const { data, error } = await supabase.from('equipment').insert(payload).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateEquipment(id, patch) {
+  const { data, error } = await supabase.from('equipment').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteEquipment(id) {
+  const { error } = await supabase.from('equipment').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function setEquipmentStatus(id, status) {
+  return updateEquipment(id, { status });
+}
+
+/* ===================== REQUESTS ===================== */
+
+export async function fetchRequests({ status = null, mine = false, statuses = null } = {}) {
+  let query = supabase.from('borrowing_requests')
+    .select(REQUEST_SELECT)
+    .order('request_date', { ascending: false });
+
+  if (status) query = query.eq('status', status);
+  if (statuses) query = query.in('status', statuses);
+
+  if (mine) {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+    query = query.eq('requester_id', user.id);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// BR-A4-01: the database trigger also blocks non-available equipment.
+export async function createBorrowingRequest(equipmentId, notes = '', dueDate = null) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: equipment, error: eqError } = await supabase
+    .from('equipment').select('status, asset_tag').eq('id', equipmentId).single();
+  if (eqError) throw eqError;
+  if (equipment.status !== 'available') {
+    throw new Error(`${equipment.asset_tag} is currently ${equipment.status} and cannot be requested.`);
+  }
+
+  const { data, error } = await supabase
+    .from('borrowing_requests')
+    .insert({
+      requester_id: user.id,
+      equipment_id: Number(equipmentId),
+      status: 'pending',
+      notes,
+      due_date: dueDate
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// BR-A4-03: only an administrator may approve. Enforced again in the DB.
+export async function approveRequest(requestId) {
+  const user = await getCurrentUser();
+  if (user?.role !== 'admin') throw new Error('Only administrators can approve requests.');
+  return patchRequest(requestId, { status: 'approved' }, 'pending');
+}
+
+export async function rejectRequest(requestId) {
+  const user = await getCurrentUser();
+  if (user?.role !== 'admin') throw new Error('Only administrators can reject requests.');
+  return patchRequest(requestId, { status: 'rejected' }, 'pending');
+}
+
+// BR-A4-04: only approved requests may be released.
+export async function releaseEquipment(requestId) {
+  const user = await getCurrentUser();
+  if (!['staff', 'admin'].includes(user?.role)) {
+    throw new Error('Only staff or administrators can release equipment.');
+  }
+  return patchRequest(requestId, { status: 'released' }, 'approved');
+}
+
+// BR-A4-06 / BR-A4-08: the DB trigger flips the asset back to available or damaged.
+export async function processReturn(requestId, isDamaged = false) {
+  const user = await getCurrentUser();
+  if (!['staff', 'admin'].includes(user?.role)) {
+    throw new Error('Only staff or administrators can process returns.');
+  }
+  const { data, error } = await supabase
+    .from('borrowing_requests')
+    .update({ status: 'returned', is_damaged: !!isDamaged })
+    .eq('id', requestId)
+    .in('status', ['released', 'overdue'])
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('BR-A4-08: This transaction was already returned.');
+  return data;
+}
+
+async function patchRequest(requestId, patch, requiredStatus) {
+  const { data, error } = await supabase
+    .from('borrowing_requests')
+    .update(patch)
+    .eq('id', requestId)
+    .eq('status', requiredStatus)
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error(`This request is no longer "${requiredStatus}". Refresh the page.`);
+  return data;
+}
+
+/* ===================== USERS ===================== */
+
+export async function fetchUsers() {
+  const { data, error } = await supabase
+    .from('users').select('*').order('full_name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateUserRole(userId, role) {
+  const { data, error } = await supabase
+    .from('users').update({ role }).eq('id', userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/* ===================== STATS ===================== */
+
+export async function countRows(table, filters = {}) {
+  let query = supabase.from(table).select('id', { count: 'exact', head: true });
+  Object.entries(filters).forEach(([col, val]) => {
+    query = Array.isArray(val) ? query.in(col, val) : query.eq(col, val);
+  });
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
